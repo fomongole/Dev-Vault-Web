@@ -13,10 +13,10 @@ import { SnippetCard } from "@/features/snippets/components/snippet-card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, Variants } from "framer-motion";
 
-// Snappier variants for better perceived performance
-const containerVariants = {
+// Explicitly typing these as Variants solves the build error
+const containerVariants: Variants = {
     hidden: { opacity: 0 },
     visible: {
         opacity: 1,
@@ -24,7 +24,7 @@ const containerVariants = {
     }
 };
 
-const itemVariants = {
+const itemVariants: Variants = {
     hidden: { y: 10, opacity: 0 },
     visible: {
         y: 0,
@@ -57,7 +57,8 @@ export default function Home() {
     }, [snippets, searchQuery]);
 
     const scrollToFeed = () => {
-        document.getElementById('feed')?.scrollIntoView({ behavior: 'smooth' });
+        const element = document.getElementById('feed');
+        if (element) element.scrollIntoView({ behavior: 'smooth' });
     };
 
     return (
@@ -87,7 +88,6 @@ export default function Home() {
                     <ModeToggle />
                     <div className="h-6 w-[1px] bg-border hidden sm:block mx-1" />
 
-                    {/* Only show buttons if mounted to prevent layout shift */}
                     {mounted ? (
                         isLoggedIn ? (
                             <Link href="/dashboard">
@@ -147,7 +147,6 @@ export default function Home() {
                         </Button>
                     </div>
 
-                    {/* Code Visual - Simplified animation for speed */}
                     <motion.div
                         className="mt-16 w-full max-w-4xl"
                         initial={{ opacity: 0, y: 20 }}
