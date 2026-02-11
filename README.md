@@ -1,7 +1,8 @@
 # DevVault
 
-### [🌐 View Live Demo](https://dev-vault-web.vercel.app/)
 **DevVault** is a high-performance, enterprise-ready code snippet orchestrator. It bridges the gap between secure, private storage and global knowledge sharing—delivered through a precision-engineered, glassmorphic interface.
+
+### [🌐 View Live Demo](https://dev-vault-web.vercel.app/)
 
 ![Next.js](https://img.shields.io/badge/Next.js-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)
 ![React 19](https://img.shields.io/badge/React_19-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
