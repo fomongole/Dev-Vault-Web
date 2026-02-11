@@ -1,50 +1,11 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { Check, Copy } from "lucide-react";
-import { PrismLight as SyntaxHighlighter } from "react-syntax-highlighter";
-import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
-
-import tsx from "react-syntax-highlighter/dist/esm/languages/prism/tsx";
-import typescript from "react-syntax-highlighter/dist/esm/languages/prism/typescript";
-import javascript from "react-syntax-highlighter/dist/esm/languages/prism/javascript";
-import python from "react-syntax-highlighter/dist/esm/languages/prism/python";
-import java from "react-syntax-highlighter/dist/esm/languages/prism/java";
-import csharp from "react-syntax-highlighter/dist/esm/languages/prism/csharp";
-import go from "react-syntax-highlighter/dist/esm/languages/prism/go";
-import rust from "react-syntax-highlighter/dist/esm/languages/prism/rust";
-import swift from "react-syntax-highlighter/dist/esm/languages/prism/swift";
-import kotlin from "react-syntax-highlighter/dist/esm/languages/prism/kotlin";
-import dart from "react-syntax-highlighter/dist/esm/languages/prism/dart";
-import sql from "react-syntax-highlighter/dist/esm/languages/prism/sql";
-import markup from "react-syntax-highlighter/dist/esm/languages/prism/markup";
-import css from "react-syntax-highlighter/dist/esm/languages/prism/css";
-import json from "react-syntax-highlighter/dist/esm/languages/prism/json";
-import yaml from "react-syntax-highlighter/dist/esm/languages/prism/yaml";
-import bash from "react-syntax-highlighter/dist/esm/languages/prism/bash";
-
-import { Button } from "@/components/ui/button";
+import { useState, useMemo, useEffect } from "react";
+import { Check, Copy, Terminal, Loader2 } from "lucide-react";
+import { PrismAsyncLight as SyntaxHighlighter } from "react-syntax-highlighter";
+import { oneDark, oneLight } from "react-syntax-highlighter/dist/esm/styles/prism";
+import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
-
-SyntaxHighlighter.registerLanguage("tsx", tsx);
-SyntaxHighlighter.registerLanguage("typescript", typescript);
-SyntaxHighlighter.registerLanguage("javascript", javascript);
-SyntaxHighlighter.registerLanguage("python", python);
-SyntaxHighlighter.registerLanguage("java", java);
-SyntaxHighlighter.registerLanguage("csharp", csharp);
-SyntaxHighlighter.registerLanguage("go", go);
-SyntaxHighlighter.registerLanguage("rust", rust);
-SyntaxHighlighter.registerLanguage("swift", swift);
-SyntaxHighlighter.registerLanguage("kotlin", kotlin);
-SyntaxHighlighter.registerLanguage("dart", dart);
-SyntaxHighlighter.registerLanguage("sql", sql);
-SyntaxHighlighter.registerLanguage("html", markup);
-SyntaxHighlighter.registerLanguage("xml", markup);
-SyntaxHighlighter.registerLanguage("css", css);
-SyntaxHighlighter.registerLanguage("json", json);
-SyntaxHighlighter.registerLanguage("yaml", yaml);
-SyntaxHighlighter.registerLanguage("shell", bash);
-SyntaxHighlighter.registerLanguage("bash", bash);
 
 interface CodeViewerProps {
     code: string;
@@ -62,6 +23,12 @@ export function CodeViewer({
                                maxHeight
                            }: CodeViewerProps) {
     const [isCopied, setIsCopied] = useState(false);
+    const { resolvedTheme } = useTheme();
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
     const copyToClipboard = async () => {
         if (!code) return;
@@ -74,74 +41,122 @@ export function CodeViewer({
         }
     };
 
+    // Refined Theme Selection with background overrides
+    const activeStyle = useMemo(() => {
+        const theme = resolvedTheme === "dark" ? oneDark : oneLight;
+        if (!mounted) return oneDark;
+
+        // We spread the theme and explicitly set the background to transparent
+        // to prevent weird gray blocks
+        return {
+            ...theme,
+            'pre[class*="language-"]': {
+                ...theme['pre[class*="language-"]'],
+                background: "transparent",
+            },
+            'code[class*="language-"]': {
+                ...theme['code[class*="language-"]'],
+                background: "transparent",
+            },
+        };
+    }, [resolvedTheme, mounted]);
+
     const safeLanguage = useMemo(() => {
         const langMap: Record<string, string> = {
-            typescript: "typescript",
-            javascript: "javascript",
-            python: "python",
-            java: "java",
-            csharp: "csharp",
-            go: "go",
-            rust: "rust",
-            swift: "swift",
-            kotlin: "kotlin",
-            dart: "dart",
-            sql: "sql",
-            html: "html",
-            xml: "xml",
-            css: "css",
-            json: "json",
-            yaml: "yaml",
-            shell: "shell",
+            tsx: "tsx", typescript: "typescript", javascript: "javascript",
+            python: "python", java: "java", csharp: "csharp", go: "go",
+            rust: "rust", swift: "swift", kotlin: "kotlin", dart: "dart",
+            sql: "sql", html: "markup", xml: "markup", css: "css",
+            json: "json", yaml: "yaml", shell: "bash", bash: "bash",
         };
-
-        const input = language.toLowerCase();
-        return langMap[input] || "typescript";
+        return langMap[language?.toLowerCase()] || "typescript";
     }, [language]);
+
+    if (!mounted) return null;
 
     return (
         <div className={cn(
-            "relative group rounded-lg overflow-hidden border border-zinc-800 bg-[#282c34]",
+            "group relative flex flex-col rounded-xl overflow-hidden border transition-all duration-300",
+            "border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#0d0d0e] shadow-sm font-mono",
             className
         )}>
-            {!hideCopyButton && (
-                <div className="absolute top-3 right-3 z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                    <Button
-                        variant="secondary"
-                        size="icon"
-                        className="h-7 w-7 bg-zinc-700/50 hover:bg-zinc-600/80 text-zinc-100 backdrop-blur-md shadow-sm"
+            {/* Window Header */}
+            <div className={cn(
+                "flex items-center justify-between px-4 py-2.5 select-none border-b transition-colors",
+                "bg-zinc-50/80 dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-800/50"
+            )}>
+                <div className="flex items-center gap-4">
+                    <div className="flex gap-1.5">
+                        <div className="h-2.5 w-2.5 rounded-full bg-red-500/20 border border-red-500/40" />
+                        <div className="h-2.5 w-2.5 rounded-full bg-amber-500/20 border border-amber-500/40" />
+                        <div className="h-2.5 w-2.5 rounded-full bg-green-500/20 border border-green-500/40" />
+                    </div>
+                    <div className="flex items-center gap-2 text-zinc-400 dark:text-zinc-500">
+                        <Terminal className="h-3.5 w-3.5" />
+                        <span className="text-[10px] font-bold uppercase tracking-widest">{safeLanguage}</span>
+                    </div>
+                </div>
+
+                {!hideCopyButton && (
+                    <button
                         onClick={copyToClipboard}
+                        className={cn(
+                            "flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-bold transition-all",
+                            "hover:bg-zinc-200/50 dark:hover:bg-zinc-800 active:scale-95",
+                            isCopied ? "text-green-600 dark:text-green-400" : "text-zinc-500 dark:text-zinc-400"
+                        )}
                     >
                         {isCopied ? (
-                            <Check className="h-3.5 w-3.5 text-green-400" />
+                            <>
+                                <Check className="h-3 w-3 stroke-[3px]" />
+                                <span>COPIED</span>
+                            </>
                         ) : (
-                            <Copy className="h-3.5 w-3.5" />
+                            <>
+                                <Copy className="h-3 w-3" />
+                                <span>COPY</span>
+                            </>
                         )}
-                        <span className="sr-only">Copy code</span>
-                    </Button>
-                </div>
-            )}
+                    </button>
+                )}
+            </div>
 
+            {/* Code Body */}
             <div
                 className={cn(
-                    "custom-scrollbar overflow-auto",
-                    maxHeight ? `max-h-[${maxHeight}]` : ""
+                    "overflow-auto relative bg-transparent",
+                    "scrollbar-thin scrollbar-track-transparent scrollbar-thumb-zinc-300 dark:scrollbar-thumb-zinc-800"
                 )}
-                style={maxHeight ? { maxHeight } : undefined}
+                style={{ maxHeight: maxHeight || "none" }}
             >
                 <SyntaxHighlighter
                     language={safeLanguage}
-                    style={oneDark}
+                    style={activeStyle}
+                    showLineNumbers={true}
+                    PreTag={({ children }) => <pre className="m-0 bg-transparent">{children}</pre>}
+                    loading={
+                        <div className="flex items-center justify-center p-12">
+                            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                        </div>
+                    }
+                    lineNumberStyle={{
+                        minWidth: "3.2em",
+                        paddingRight: "1.2em",
+                        color: resolvedTheme === "dark" ? "#3b3b3f" : "#9ca3af",
+                        textAlign: "right",
+                        fontSize: "11px",
+                        userSelect: "none",
+                    }}
                     customStyle={{
                         margin: 0,
-                        padding: "1.5rem",
-                        fontSize: "0.875rem",
-                        lineHeight: "1.6",
+                        padding: "1.5rem 0.5rem",
+                        fontSize: "13px",
+                        lineHeight: "1.7",
                         background: "transparent",
                     }}
                     wrapLongLines={false}
                 >
-                    {code}
+                    {(code || "").trim()}
                 </SyntaxHighlighter>
             </div>
         </div>

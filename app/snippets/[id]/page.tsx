@@ -54,7 +54,7 @@ export default function SnippetDetailPage() {
     const { data: snippet, isLoading, isError, error } = useQuery({
         queryKey: ["snippet", id],
         queryFn: () => getSnippet(id as string),
-        retry: 1, // Don't retry endlessly if it's a 403/404
+        retry: 1,
     });
 
     const { mutate: deleteSnippet, isPending: isDeleting } = useDeleteSnippet();
@@ -101,16 +101,13 @@ export default function SnippetDetailPage() {
         });
     };
 
-    // 1. Loading State
     if (isLoading) return <SnippetDetailSkeleton />;
 
-    // 2.Handle 403/401 separately from 404
     if (isError) {
         const axiosError = error as AxiosError;
         const status = axiosError.response?.status;
-        const isLoggedIn = !!getUserIdFromToken(); // Check auth status
+        const isLoggedIn = !!getUserIdFromToken();
 
-        // Case A: Forbidden / Unauthorized (Private Snippet)
         if (status === 403 || status === 401) {
             return (
                 <div className="flex h-[80vh] flex-col items-center justify-center gap-6 text-center px-4">
@@ -128,28 +125,17 @@ export default function SnippetDetailPage() {
                         </h2>
                         <p className="text-muted-foreground max-w-md mx-auto">
                             {isLoggedIn
-                                ? "You are logged in, but you do not have permission to view this private snippet. It belongs to another user."
-                                : "This snippet is private. If you are the owner, please log in to view it."
+                                ? "You are logged in, but you do not have permission to view this private snippet."
+                                : "This snippet is private. Please log in to view it."
                             }
                         </p>
                     </div>
 
                     <div className="flex gap-4">
-                        <Button variant="outline" onClick={() => router.back()}>
-                            Go Back
-                        </Button>
-
-                        {/* Only show Login button if NOT logged in */}
+                        <Button variant="outline" onClick={() => router.back()}>Go Back</Button>
                         {!isLoggedIn && (
                             <Button onClick={() => router.push(`/login?redirect=/snippets/${id}`)}>
                                 Log In to Access
-                            </Button>
-                        )}
-
-                        {/* If logged in but blocked, show Dashboard link */}
-                        {isLoggedIn && (
-                            <Button onClick={() => router.push("/dashboard")}>
-                                Return to Dashboard
                             </Button>
                         )}
                     </div>
@@ -157,18 +143,10 @@ export default function SnippetDetailPage() {
             );
         }
 
-        // Case B: Truly Not Found (404)
         return (
             <div className="flex h-[80vh] flex-col items-center justify-center gap-6 text-center px-4">
-                <div className="p-4 bg-muted rounded-full">
-                    <AlertTriangle className="h-10 w-10 text-muted-foreground" />
-                </div>
-                <div className="space-y-2">
-                    <h2 className="text-2xl font-bold">Snippet Not Found</h2>
-                    <p className="text-muted-foreground max-w-md mx-auto">
-                        The snippet you are looking for does not exist or has been deleted.
-                    </p>
-                </div>
+                <AlertTriangle className="h-10 w-10 text-muted-foreground" />
+                <h2 className="text-2xl font-bold">Snippet Not Found</h2>
                 <Button asChild variant="default">
                     <Link href="/dashboard">Return to Dashboard</Link>
                 </Button>
@@ -180,7 +158,7 @@ export default function SnippetDetailPage() {
 
     return (
         <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 pb-20">
-            {/* Header and Content Layout */}
+            {/* Top Navigation Bar */}
             <div className="sticky top-0 z-30 border-b bg-background/80 backdrop-blur-md px-6 py-4 transition-all">
                 <div className="container mx-auto flex items-center justify-between">
                     <Button variant="ghost" size="sm" onClick={() => router.back()} className="text-muted-foreground hover:text-foreground">
@@ -221,24 +199,13 @@ export default function SnippetDetailPage() {
 
             <main className="container mx-auto grid grid-cols-1 gap-8 p-6 lg:grid-cols-4 mt-6">
                 <div className="lg:col-span-3 space-y-4">
-                    <div className="rounded-xl border bg-zinc-950 shadow-2xl overflow-hidden">
-                        <div className="flex items-center justify-between border-b border-zinc-800 px-4 py-3 bg-zinc-900/50">
-                            <div className="flex items-center gap-2">
-                                <div className="flex gap-1.5">
-                                    <div className="w-2.5 h-2.5 rounded-full bg-red-500/80" />
-                                    <div className="w-2.5 h-2.5 rounded-full bg-amber-500/80" />
-                                    <div className="w-2.5 h-2.5 rounded-full bg-green-500/80" />
-                                </div>
-                                <span className="ml-4 text-xs font-mono text-zinc-400 uppercase tracking-widest font-semibold">
-                                    {snippet.language}
-                                </span>
-                            </div>
-                        </div>
+                    {/* FIXED: Removed the extra header wrapper. CodeViewer handles its own chrome. */}
+                    <div className="shadow-2xl rounded-xl overflow-hidden ring-1 ring-zinc-200 dark:ring-zinc-800">
                         <CodeViewer
                             code={snippet.code}
                             language={snippet.language}
                             hideCopyButton={false}
-                            maxHeight="800px"
+                            maxHeight="none"
                         />
                     </div>
                 </div>
@@ -339,9 +306,9 @@ function SnippetDetailSkeleton() {
                 <div className="lg:col-span-3">
                     <Skeleton className="h-[500px] w-full rounded-xl" />
                 </div>
-                <div className="space-y-6">
-                    <Skeleton className="h-10 w-3/4" />
-                    <div className="flex gap-2">
+                <div className="space-y-6 text-center">
+                    <Skeleton className="h-10 w-3/4 mx-auto" />
+                    <div className="flex gap-2 justify-center">
                         <Skeleton className="h-6 w-16" />
                         <Skeleton className="h-6 w-16" />
                     </div>

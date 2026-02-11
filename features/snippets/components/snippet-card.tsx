@@ -9,13 +9,14 @@ import {
     Code2,
     Globe,
     Lock,
-    MoreVertical,
+    MoreHorizontal,
     Trash2,
     Pencil,
     Loader2,
     Star,
     Copy,
-    Check
+    Check,
+    ChevronRight
 } from "lucide-react";
 
 import { Snippet } from "@/types";
@@ -24,7 +25,7 @@ import { useTogglePin } from "../hooks/use-toggle-pin";
 import { CodeViewer } from "@/components/ui/code-viewer";
 import { EditSnippetDialog } from "./edit-snippet-dialog";
 
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -33,230 +34,109 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 
-interface SnippetCardProps {
-    snippet: Snippet;
-    isReadOnly?: boolean;
-}
-
-export function SnippetCard({ snippet, isReadOnly = false }: SnippetCardProps) {
-    const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-    const [showEditDialog, setShowEditDialog] = useState(false);
+export function SnippetCard({ snippet, isReadOnly = false }: { snippet: Snippet; isReadOnly?: boolean }) {
     const [hasCopied, setHasCopied] = useState(false);
-
-    const { mutate: deleteSnippet, isPending: isDeleting } = useDeleteSnippet();
-
+    const { mutate: deleteSnippet } = useDeleteSnippet();
     const { mutate: togglePin, isPending: isPinning } = useTogglePin();
 
-    const isPublic = snippet.visibility === "public";
-
-    const handleQuickCopy = async (e: React.MouseEvent) => {
+    const handleCopy = async (e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
-        try {
-            await navigator.clipboard.writeText(snippet.code);
-            setHasCopied(true);
-            toast.success("Code copied");
-            setTimeout(() => setHasCopied(false), 2000);
-        } catch (err) {
-            toast.error("Failed to copy");
-        }
-    };
-
-    const handleTogglePin = (e: React.MouseEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        // Optimistic UI handled by React Query cache, but loading state handles the visual feedback
-        togglePin({ id: snippet.id, isPinned: !snippet.isPinned });
-    };
-
-    const handleDelete = (e: React.MouseEvent) => {
-        e.preventDefault();
-        deleteSnippet(snippet.id, {
-            onSuccess: () => {
-                setShowDeleteDialog(false);
-                toast.success("Snippet deleted");
-            },
-            onError: () => toast.error("Failed to delete"),
-        });
+        await navigator.clipboard.writeText(snippet.code);
+        setHasCopied(true);
+        toast.success("Code copied");
+        setTimeout(() => setHasCopied(false), 2000);
     };
 
     return (
-        <>
-            <Card className={cn(
-                "group relative flex flex-col justify-between transition-all duration-300",
-                "hover:shadow-lg hover:-translate-y-1",
-                snippet.isPinned
-                    ? "border-amber-500/50 bg-amber-500/[0.02]"
-                    : "hover:border-zinc-400 dark:hover:border-zinc-500"
-            )}>
+        <Card className="group flex flex-col h-[340px] bg-zinc-50/50 dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 hover:border-zinc-400 dark:hover:border-zinc-600 transition-all overflow-hidden shadow-sm hover:shadow-md">
+
+            {/* 1. Header Section: Pure Metadata */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50">
+                <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <div className="p-1.5 rounded-md bg-zinc-100 dark:bg-zinc-800 shrink-0">
+                        <Code2 className="h-4 w-4 text-zinc-500" />
+                    </div>
+                    {/* The Title: Fully protected by flex-1 and truncate */}
+                    <h3 className="font-semibold text-sm truncate text-zinc-900 dark:text-zinc-100">
+                        {snippet.title}
+                    </h3>
+                </div>
+
+                <div className="flex items-center gap-1 shrink-0 ml-4">
+                    {!isReadOnly && (
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className={cn("h-8 w-8", snippet.isPinned && "text-amber-500")}
+                            onClick={(e) => { e.preventDefault(); togglePin({ id: snippet.id, isPinned: !snippet.isPinned }); }}
+                        >
+                            {isPinning ? <Loader2 className="h-3 w-3 animate-spin" /> : <Star className={cn("h-4 w-4", snippet.isPinned && "fill-current")} />}
+                        </Button>
+                    )}
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={handleCopy}><Copy className="mr-2 h-4 w-4" /> Copy Code</DropdownMenuItem>
+                            {!isReadOnly && (
+                                <>
+                                    <DropdownMenuItem><Pencil className="mr-2 h-4 w-4" /> Edit</DropdownMenuItem>
+                                    <DropdownMenuItem className="text-red-600"><Trash2 className="mr-2 h-4 w-4" /> Delete</DropdownMenuItem>
+                                </>
+                            )}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                </div>
+            </div>
+
+            {/* 2. Content Section: Interactive Preview */}
+            <div className="relative flex-1 overflow-hidden group/code">
+                <Link href={`/snippets/${snippet.id}`} className="absolute inset-0 z-10" />
+
+                <CodeViewer
+                    code={snippet.code}
+                    language={snippet.language}
+                    className="h-full w-full rounded-none border-none text-xs"
+                    hideCopyButton={true}
+                />
+
+                {/* Bottom Overlay: Fade + Stats */}
+                <div className="absolute bottom-0 inset-x-0 h-20 bg-gradient-to-t from-zinc-50 dark:from-zinc-950 to-transparent pointer-events-none z-20" />
+
+                {/* Float Action: Copy Button appears on hover over code */}
+                <Button
+                    onClick={handleCopy}
+                    size="sm"
+                    className="absolute top-3 right-3 z-30 opacity-0 group-hover/code:opacity-100 transition-opacity bg-white/90 dark:bg-zinc-800/90 text-zinc-900 dark:text-zinc-100 shadow-sm border border-zinc-200 dark:border-zinc-700"
+                >
+                    {hasCopied ? <Check className="h-3.5 w-3.5 mr-2 text-green-500" /> : <Copy className="h-3.5 w-3.5 mr-2" />}
+                    {hasCopied ? "Copied" : "Copy"}
+                </Button>
+            </div>
+
+            {/* 3. Footer Section: Status & Navigation */}
+            <div className="flex items-center justify-between px-4 py-2 bg-white dark:bg-zinc-900/50 border-t border-zinc-200 dark:border-zinc-800">
+                <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-1.5 text-[11px] text-zinc-500 font-medium uppercase tracking-wider">
+                        {snippet.visibility === "public" ? <Globe className="h-3 w-3" /> : <Lock className="h-3 w-3" />}
+                        {snippet.language}
+                    </div>
+                </div>
+
                 <Link
                     href={`/snippets/${snippet.id}`}
-                    className="absolute inset-0 z-0 focus:outline-none"
-                    aria-label={`View snippet: ${snippet.title}`}
+                    className="flex items-center gap-1 text-[11px] font-bold text-primary hover:underline z-30"
                 >
-                    <span className="sr-only">View {snippet.title}</span>
+                    VIEW FULL
+                    <ChevronRight className="h-3 w-3" />
                 </Link>
-
-                {!isReadOnly && (
-                    <Button
-                        variant="secondary"
-                        size="icon"
-                        onClick={handleTogglePin}
-                        disabled={isPinning}
-                        className={cn(
-                            "absolute -top-3 -left-3 h-8 w-8 rounded-full border shadow-md z-20 transition-all duration-200 flex items-center justify-center",
-                            snippet.isPinned
-                                ? "opacity-100 scale-100 text-amber-500 border-amber-200 bg-amber-50 dark:bg-amber-950/30"
-                                : "opacity-0 group-hover:opacity-100 scale-90 group-hover:scale-100 text-zinc-400 bg-background",
-                            // Keep visible if loading
-                            isPinning && "opacity-100 scale-100"
-                        )}
-                        title={snippet.isPinned ? "Unpin snippet" : "Pin to top"}
-                    >
-                        {isPinning ? (
-                            <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
-                        ) : (
-                            <Star className={cn("h-4 w-4", snippet.isPinned && "fill-current")} />
-                        )}
-                    </Button>
-                )}
-
-                <CardHeader className="pb-2 relative z-10">
-                    <div className="flex justify-between items-start gap-2">
-                        <div className="flex items-center gap-2 min-w-0 pl-2">
-                            <CardTitle className="text-base font-bold truncate leading-none">
-                                {snippet.title}
-                            </CardTitle>
-                            {isPublic ? (
-                                <Globe className="h-3.5 w-3.5 text-blue-500 shrink-0" />
-                            ) : (
-                                <Lock className="h-3.5 w-3.5 text-zinc-400 shrink-0" />
-                            )}
-                        </div>
-
-                        <div className="flex items-center gap-1">
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={handleQuickCopy}
-                                className={cn(
-                                    "h-8 w-8 transition-opacity z-10",
-                                    "opacity-100 lg:opacity-0 lg:group-hover:opacity-100"
-                                )}
-                            >
-                                {hasCopied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
-                            </Button>
-
-                            {!isReadOnly && (
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <Button
-                                            variant="ghost"
-                                            className={cn(
-                                                "h-8 w-8 p-0 transition-opacity z-10 relative",
-                                                "opacity-100 lg:opacity-0 lg:group-hover:opacity-100"
-                                            )}
-                                        >
-                                            <MoreVertical className="h-4 w-4" />
-                                        </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                        <DropdownMenuItem onClick={() => setShowEditDialog(true)}>
-                                            <Pencil className="mr-2 h-4 w-4" /> Edit
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem
-                                            className="text-red-600 focus:text-red-600"
-                                            onClick={() => setShowDeleteDialog(true)}
-                                        >
-                                            <Trash2 className="mr-2 h-4 w-4" /> Delete
-                                        </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
-                            )}
-                        </div>
-                    </div>
-                </CardHeader>
-
-                <CardContent className="pb-2 flex-grow space-y-3 relative z-0">
-                    <div className="bg-zinc-950 rounded-lg border border-zinc-800 relative h-40 overflow-hidden group-hover:border-zinc-700 transition-colors pointer-events-none">
-                        <CodeViewer
-                            code={snippet.code}
-                            language={snippet.language}
-                            className="h-full text-[13px]"
-                        />
-                        <div className="absolute bottom-0 left-0 w-full h-16 bg-gradient-to-t from-zinc-950 via-zinc-950/80 to-transparent" />
-                    </div>
-
-                    {snippet.tags && snippet.tags.length > 0 && (
-                        <div className="flex flex-wrap gap-1.5 min-h-[24px]">
-                            {snippet.tags.map((tag) => (
-                                <Badge
-                                    key={tag}
-                                    variant="outline"
-                                    className="text-[10px] font-mono bg-zinc-100/50 dark:bg-zinc-800/50 px-1.5 py-0"
-                                >
-                                    #{tag}
-                                </Badge>
-                            ))}
-                        </div>
-                    )}
-                </CardContent>
-
-                <CardFooter className="flex justify-between items-center text-[11px] text-muted-foreground pt-3 border-t bg-zinc-50/50 dark:bg-zinc-900/50 rounded-b-xl relative z-10">
-                    <div className="flex items-center gap-1.5 font-medium text-foreground">
-                        <Code2 className="h-3.5 w-3.5" />
-                        <span className="capitalize">{snippet.language}</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                        <Calendar className="h-3.5 w-3.5" />
-                        <span>{format(new Date(snippet.createdAt), "MMM d, yyyy")}</span>
-                    </div>
-                </CardFooter>
-            </Card>
-
-            {!isReadOnly && (
-                <>
-                    <EditSnippetDialog
-                        snippet={snippet}
-                        open={showEditDialog}
-                        onOpenChange={setShowEditDialog}
-                    />
-                    <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-                        <AlertDialogContent>
-                            <AlertDialogHeader>
-                                <AlertDialogTitle>Delete Snippet</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                    Are you sure you want to delete <strong>&#34;{snippet.title}&#34;</strong>?
-                                    <br />
-                                    This action cannot be undone.
-                                </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                                <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-                                <AlertDialogAction
-                                    onClick={handleDelete}
-                                    disabled={isDeleting}
-                                    className="bg-red-600 hover:bg-red-700 text-white"
-                                >
-                                    {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Delete Snippet"}
-                                </AlertDialogAction>
-                            </AlertDialogFooter>
-                        </AlertDialogContent>
-                    </AlertDialog>
-                </>
-            )}
-        </>
+            </div>
+        </Card>
     );
 }
